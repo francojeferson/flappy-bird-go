@@ -1,104 +1,151 @@
 # Flappy Bird in Go
 
-[![Go Version](https://img.shields.io/badge/go-1.22+-blue.svg)](https://golang.org/dl/)
+[![Go Version](https://img.shields.io/badge/go-1.24.4-blue.svg)](https://golang.org/dl/)
+[![Ebiten Version](https://img.shields.io/badge/ebiten-2.8.8-blue.svg)](https://ebiten.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A simple Flappy Bird clone implemented in Go using the Ebiten game engine. This project was created using the
-[OpenRouter](https://openrouter.ai) model `deepseek/deepseek-r1-0528:free` through Cline extension, with a prompt-driven
-development process that emphasized iterative planning and implementation.
+A Flappy Bird clone implemented in Go using the Ebiten v2 game engine. All visuals are procedurally drawn colored rectangles — no sprites, assets, or audio. Desktop only, keyboard controls.
 
-## Development Process
-
-This game was developed using an iterative approach with the following steps:
-
-1. Created a `plan.md` file to outline key systems and requirements
-2. For each system (bird physics, pipe generation, collision detection, etc.):
-   - Defined key considerations and requirements
-   - Specified interactions with other systems
-   - Outlined necessary logic and mathematical calculations
-3. Conducted iterative reviews:
-   - Verified system integration points
-   - Identified potential issues
-   - Updated the plan to address complexities
-4. Implemented one function at a time, ensuring alignment with the plan
-5. Repeated the process until all systems were implemented and tested
-
-The complete development prompt and iterative planning process can be reviewed in the [plan.md](plan.md) file.
+This project was created using the [OpenRouter](https://openrouter.ai) model `deepseek/deepseek-r1-0528:free` through Cline extension, with a prompt-driven development process that emphasized iterative planning and implementation.
 
 ![Game Screenshot](screenshot.png)
 
 ## Features
 
-- Bird physics with gravity and flap mechanics
-- Randomly generated pipes with varying heights
-- Collision detection (pipes, ground, ceiling)
-- Score tracking with high score persistence
-- Game states: Start, Play, Game Over
-- Simple UI with instructions and score display
-- Keyboard controls (SPACE key)
+- Bird physics with gravity, flap mechanics, and rotation smoothing
+- Randomly generated green pipe pairs with gaps
+- AABB collision detection (pipes, ground, ceiling)
+- Score tracking with session-based high score (not persisted to disk)
+- Three game states: Start Screen, Play, Game Over
+- Procedural rendering — no external assets required
+- Fixed 800x600 window, 60 FPS game loop
 
 ## Installation
 
-1. Ensure you have Go installed (version 1.22 or higher)
-2. Clone the repository:
+### Prerequisites
 
-   ```bash
-   git clone https://github.com/francojeferson/flappy-bird-go.git
-   cd flappy-bird-go
-   ```
+- Go 1.24.4 or higher
 
-3. Install dependencies:
+### Quick Start
 
-   ```bash
-   go get github.com/hajimehoshi/ebiten/v2
-   ```
+```bash
+git clone https://github.com/francojeferson/flappy-bird-go.git
+cd flappy-bird-go
+go run .
+```
 
-4. Run the game:
+Or build a standalone executable:
 
-   ```bash
-   go run .
-   ```
+```bash
+go build -o flappy-bird.exe .
+./flappy-bird.exe
+```
 
 ## How to Play
 
-1. Press **SPACE** to start the game
-2. Press **SPACE** to make the bird flap upward
-3. Navigate through the pipe gaps to score points
+1. Press **SPACE** on the start screen to begin
+2. Press **SPACE** repeatedly to make the bird flap upward
+3. Navigate through the green pipe gaps to score points
 4. Avoid hitting pipes, the ground, or the ceiling
-5. When you crash, press **SPACE** to restart
+5. On game over, press **SPACE** to restart immediately
 
-Each pipe you pass through scores 1 point. Try to beat your high score!
+Each gap passed scores 1 point. The high score resets when you close the application.
 
-## Controls
+### Controls
 
-- **SPACE**: Start game / Flap / Restart after game over
+| Key     | Action                          |
+|---------|---------------------------------|
+| SPACE   | Start game / Flap / Restart     |
+
+## Technical Details
+
+### Architecture
+
+Single-file monolithic design in `main.go`. All game logic lives in the `main` package with a single `Game` struct implementing Ebiten's `Game` interface (Update, Draw, Layout).
+
+### Core Constants
+
+| Constant     | Value  | Description                        |
+|--------------|--------|------------------------------------|
+| screenWidth  | 800    | Window width                       |
+| screenHeight | 600    | Window height                      |
+| birdSize     | 40     | Bird square side length (pixels)   |
+| pipeWidth    | 80     | Pipe rectangle width (pixels)      |
+| pipeGap      | 150    | Vertical gap between pipe pairs    |
+| pipeSpeed    | 200    | Pipe scroll speed (pixels/second)  |
+
+### Game Mechanics
+
+- **Gravity**: 600 px/s² downward acceleration
+- **Flap impulse**: -300 px/s (instantaneous upward velocity)
+- **Pipe interval**: 3 seconds between spawns
+- **Bird rotation**: Lerp-based smoothing (90% previous angle + 10% target angle), clamped between -90° and +30°
+- **Collision**: Axis-aligned bounding box (AABB) — bird rotation does not affect collision bounds
+- **Timestep**: Fixed 1/60 delta-time (assumes 60 FPS)
+
+### Game States
+
+1. **Start** — Shows "PRESS SPACE TO START", waits for input
+2. **Play** — Active gameplay: gravity, flap, pipe spawning/movement, collision, scoring
+3. **Game Over** — Shows final score, high score, and "PRESS SPACE TO RESTART"
 
 ## Project Structure
 
-```ini
+```
 flappy-bird-go/
-├── main.go        # Main game implementation
-├── plan.md        # System design and planning document
-├── go.mod         # Go module definition
-├── go.sum         # Go dependencies checksum
-└── README.md      # This file
+├── main.go            # Entire game implementation (177 lines)
+├── plan.md            # System design and iterative planning document
+├── go.mod             # Go module definition (flappy-bird-go)
+├── go.sum             # Dependency checksums
+├── screenshot.png     # In-game screenshot
+├── .gitignore         # Git ignore rules
+├── .memory-bank/      # Project documentation (architecture, tech, context)
+└── README.md          # This file
 ```
 
 ## Dependencies
 
-- [Ebiten](https://ebiten.org/) - Game engine for Go
+- [Ebiten v2.8.8](https://ebiten.org/) — 2D game engine (windowing, input, rendering, game loop)
 - Go Standard Library
 
-## Contributing
+All other dependencies in `go.sum` are transitive Ebiten requirements (graphics backend, system calls).
 
-Contributions are welcome! Please follow these steps:
+## Platforms
 
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/your-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin feature/your-feature`)
-5. Create a new Pull Request
+| Platform | Status        |
+|----------|---------------|
+| Windows  | Confirmed     |
+| Linux    | Supported     |
+| macOS    | Supported     |
+
+Touch/mobile is not configured.
+
+## Known Limitations
+
+- No delta-time usage — relies on fixed 1/60 dt, may behave differently at non-60 FPS refresh rates
+- High score not persisted to disk (resets on application close)
+- No sprites, visual assets, or audio (placeholder rectangles only)
+- No touch input for mobile devices
+- No window resizing (fixed 800x600)
+
+## Development Process
+
+This game was developed using an iterative AI-assisted approach:
+
+1. Created `plan.md` to outline key systems and requirements
+2. For each system (bird physics, pipe generation, collision detection, scoring, game states):
+   - Defined key considerations and requirements
+   - Specified data flow between systems
+   - Outlined necessary logic and calculations
+3. Conducted iterative reviews:
+   - Verified system integration points
+   - Identified potential issues
+   - Updated the plan to address complexities
+4. Implemented one function at a time, ensuring alignment with the plan
+5. Repeated until all systems were implemented and tested
+
+The complete development prompt and iterative planning process can be reviewed in [plan.md](plan.md).
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
