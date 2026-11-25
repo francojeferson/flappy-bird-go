@@ -47,7 +47,7 @@ go build -o flappy-bird.exe .
 2. Press **SPACE** repeatedly to make the bird flap upward
 3. Navigate through the green pipe gaps to score points
 4. Avoid hitting pipes, the ground, or the ceiling
-5. On game over, press **SPACE** to restart immediately
+5. On game over, wait half a second, then press **SPACE** to restart. The game ignores **SPACE** until then, so you can read the score.
 
 Each gap passed scores 1 point. The high score resets when you close the application.
 
@@ -81,7 +81,7 @@ Single-file monolithic design in `main.go`. All game logic lives in the `main` p
 - **Pipe interval**: 3 seconds between spawns
 - **Bird rotation**: Lerp-based smoothing (90% previous angle + 10% target angle), clamped between -90° and +30°
 - **Collision**: Axis-aligned bounding box (AABB) — bird rotation does not affect collision bounds
-- **Timestep**: Fixed 1/60 delta-time (assumes 60 FPS)
+- **Timestep**: Fixed 1/60 s per update tick (Ebitengine runs Update at 60 ticks per second)
 
 ### Game States
 
@@ -93,7 +93,7 @@ Single-file monolithic design in `main.go`. All game logic lives in the `main` p
 
 ```
 flappy-bird-go/
-├── main.go            # Entire game implementation (177 lines)
+├── main.go            # Entire game implementation (178 lines)
 ├── plan.md            # System design and iterative planning document
 ├── go.mod             # Go module definition (flappy-bird-go)
 ├── go.sum             # Dependency checksums
@@ -122,7 +122,7 @@ Touch/mobile is not configured.
 
 ## Known Limitations
 
-- No delta-time usage — relies on fixed 1/60 dt, may behave differently at non-60 FPS refresh rates
+- No delta-time usage — physics use a fixed 1/60 s step per tick. Ebitengine runs Update at a fixed 60 ticks per second, so game speed does not depend on the display refresh rate. Changing the TPS would change the game speed.
 - High score not persisted to disk (resets on application close)
 - No sprites, visual assets, or audio (placeholder rectangles only)
 - No touch input for mobile devices

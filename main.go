@@ -9,6 +9,7 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/hajimehoshi/ebiten/v2/ebitenutil"
+	"github.com/hajimehoshi/ebiten/v2/inpututil"
 )
 
 const (
@@ -29,7 +30,7 @@ type Game struct {
 	score      int
 	highScore  int
 	gameState  string
-	lastSpawn  time.Time
+	overTicks  int // ticks spent on the game-over screen; reset() zeroes it
 }
 
 type Pipe struct {
@@ -41,13 +42,13 @@ type Pipe struct {
 func (g *Game) Update() error {
 	switch g.gameState {
 	case "start":
-		if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.gameState = "play"
 		}
 	case "play":
 		// Bird physics
 		g.birdVel += 600 * 1/60.0
-		if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		if inpututil.IsKeyJustPressed(ebiten.KeySpace) {
 			g.birdVel = -300
 		}
 		g.birdY += g.birdVel * 1/60.0
@@ -58,21 +59,20 @@ func (g *Game) Update() error {
 		if targetAngle > 30 { targetAngle = 30 }
 		g.birdAngle = g.birdAngle*0.9 + targetAngle*0.1
 
-		// Pipe spawning
-		if time.Since(g.lastSpawn).Seconds() > 3 {
+		// Pipe spawning: 3 s of travel after the last pair, counted in ticks like the movement
+		if n := len(g.pipes); n == 0 || g.pipes[n-1].x < screenWidth-pipeSpeed*3 {
 			g.pipes = append(g.pipes, Pipe{
 				x:      screenWidth,
 				height: 100 + rand.Float64()*(screenHeight-200-pipeGap),
 			})
-			g.lastSpawn = time.Now()
 		}
 
 		// Pipe movement and scoring
 		for i := range g.pipes {
 			g.pipes[i].x -= pipeSpeed * 1/60.0
 
-			// Scoring
-			if !g.pipes[i].scored && g.birdX > g.pipes[i].x {
+			// Scoring: the bird's left edge has cleared the pipe's right edge
+			if !g.pipes[i].scored && g.birdX-birdSize/2 > g.pipes[i].x+pipeWidth {
 				g.score++
 				g.pipes[i].scored = true
 				if g.score > g.highScore {
@@ -103,7 +103,8 @@ func (g *Game) Update() error {
 		}
 
 	case "gameover":
-		if ebiten.IsKeyPressed(ebiten.KeySpace) {
+		g.overTicks++
+		if g.overTicks > 30 && inpututil.IsKeyJustPressed(ebiten.KeySpace) { // ~0.5 s of ignored Space, so GAME OVER is seen
 			g.reset()
 			g.gameState = "play"
 		}
@@ -162,7 +163,7 @@ func (g *Game) reset() {
 	g.birdVel = 0
 	g.pipes = nil
 	g.score = 0
-	g.lastSpawn = time.Now()
+	g.overTicks = 0
 }
 
 func main() {
